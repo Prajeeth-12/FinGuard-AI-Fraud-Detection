@@ -121,10 +121,7 @@ FinGuard/
 │
 │   ├── dashboard.html
 │   ├── payment.html
-│   ├── css/
-│   ├── js/
-│
-├── screenshots/
+│   
 │
 └── README.md
 ```
@@ -284,7 +281,7 @@ POST /predict
 ## Clone
 
 ```bash
-git clone https://github.com/yourusername/FinGuard.git
+git clone https://github.com/Rohithkumar-fsd/FinGuard.git
 ```
 
 ---
@@ -367,7 +364,7 @@ Add screenshots here
 
 **Rohith Kumar S**
 
-GitHub: https://github.com/yourusername
+GitHub: https://github.com/Rohithkumar-fsd
 
 ---
 
