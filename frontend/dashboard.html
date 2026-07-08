@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FinGuard AI Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#eef2f7;
+}
+
+header{
+    background:#1f2937;
+    color:white;
+    padding:20px;
+    font-size:30px;
+    font-weight:bold;
+    text-align:center;
+}
+
+.container{
+    width:90%;
+    margin:auto;
+    margin-top:30px;
+}
+
+.stats{
+    display:flex;
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.card{
+    flex:1;
+    background:white;
+    border-radius:10px;
+    padding:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,.15);
+    text-align:center;
+}
+
+.card h2{
+    margin-bottom:10px;
+    color:#555;
+}
+
+.number{
+    font-size:35px;
+    font-weight:bold;
+}
+
+.safe{
+    color:green;
+}
+
+.suspicious{
+    color:orange;
+}
+
+.fraud{
+    color:red;
+}
+
+#status{
+    margin-bottom:20px;
+    font-size:18px;
+    color:#0066cc;
+}
+
+table{
+
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+    box-shadow:0 5px 20px rgba(0,0,0,.15);
+}
+
+th{
+
+    background:#2563eb;
+    color:white;
+    padding:15px;
+}
+
+td{
+    padding:14px;
+    text-align:center;
+}
+
+tr:nth-child(even){
+    background:#f8f8f8;
+}
+
+.badge{
+    color:white;
+    padding:6px 12px;
+    border-radius:15px;
+    font-weight:bold;
+}
+
+.badge-safe{
+    background:green;
+}
+
+.badge-suspicious{
+    background:orange;
+}
+
+.badge-fraud{
+    background:red;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+FinGuard AI Fraud Detection Dashboard
+
+</header>
+
+<div class="container">
+
+<div id="status">
+Connecting...
+</div>
+
+<div class="stats">
+
+<div class="card">
+<h2>Total Transactions</h2>
+<div class="number" id="total">0</div>
+</div>
+
+<div class="card">
+<h2 class="safe">SAFE</h2>
+<div class="number safe" id="safe">0</div>
+</div>
+
+<div class="card">
+<h2 class="suspicious">SUSPICIOUS</h2>
+<div class="number suspicious" id="suspicious">0</div>
+</div>
+
+<div class="card">
+<h2 class="fraud">FRAUD</h2>
+<div class="number fraud" id="fraud">0</div>
+</div>
+
+</div>
+
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Status</th>
+<th>Rule Score</th>
+<th>ML Score</th>
+<th>Final Score</th>
+<th>Reasons</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tableBody">
+
+</tbody>
+
+</table>
+
+</div>
+
+<script>
+
+let total=0;
+let safe=0;
+let suspicious=0;
+let fraud=0;
+
+const socket=new SockJS("http://localhost:8082/fraud-alerts");
+
+const stomp=Stomp.over(socket);
+
+stomp.connect({},function(frame){
+
+document.getElementById("status").innerHTML="🟢 Connected";
+
+stomp.subscribe("/topic/fraud",function(message){
+
+const data=JSON.parse(message.body);
+
+total++;
+
+if(data.status==="SAFE")
+safe++;
+
+else if(data.status==="SUSPICIOUS")
+suspicious++;
+
+else
+fraud++;
+
+document.getElementById("total").innerHTML=total;
+document.getElementById("safe").innerHTML=safe;
+document.getElementById("suspicious").innerHTML=suspicious;
+document.getElementById("fraud").innerHTML=fraud;
+
+let badge="badge-safe";
+
+if(data.status==="FRAUD")
+badge="badge-fraud";
+
+if(data.status==="SUSPICIOUS")
+badge="badge-suspicious";
+
+const row=`
+
+<tr>
+
+<td>
+<span class="badge ${badge}">
+${data.status}
+</span>
+</td>
+
+<td>${data.ruleScore}</td>
+
+<td>${(data.mlScore*100).toFixed(2)}%</td>
+
+<td>${data.finalScore.toFixed(2)}</td>
+
+<td>${data.reasons.join(", ")}</td>
+
+</tr>
+
+`;
+
+document.getElementById("tableBody").insertAdjacentHTML("afterbegin",row);
+
+});
+
+});
+
+</script>
+
+</body>
+</html>

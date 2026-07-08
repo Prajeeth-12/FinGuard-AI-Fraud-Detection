@@ -1,0 +1,177 @@
+spring-boot-starter-web   → 1 thread per request (blocking)
+                            1000 concurrent swipes = 1000 threads = server dies
+
+spring-boot-starter-webflux → few threads handle ALL requests (non-blocking)
+                            1000 concurrent swipes = same few threads, just queued efficiently
+
+
+
+Why Mono<SwipeRequest> as the parameter type instead of just SwipeRequest?
+This is the key WebFlux concept. With regular Spring MVC:
+javapublic ResponseEntity<X> ingestSwipe(@RequestBody SwipeRequest request)
+The thread blocks while Spring reads and parses the request body.
+With WebFlux:
+javapublic Mono<X> ingestSwipe(@RequestBody Mono<SwipeRequest> requestMono)
+The thread is released back to the pool while the body streams in, and your .map() logic only runs once data arrives — asynchronously. Multiply this by thousands of concurrent swipes, and this is the difference between a handful of threads serving everyone vs. one thread per connection.
+
+A ProducerFactory is responsible for creating KafkaProducer objects.
+
+8090->kafka
+
+
+Why plain spring-boot-starter instead of spring-boot-starter-webflux or -web? This service doesn't expose any HTTP endpoints at all right now — it's purely a background Kafka consumer. No need for a web server stack.
+
+Why auto-offset-reset=earliest? If this consumer starts up for the first time (or after being reset), this tells it to read from the beginning of the topic instead of only listening for brand-new messages. Useful for testing — you can restart the AI engine and it'll reprocess anything sitting in the topic.
+
+Why spring.json.trusted.packages? By default, Spring Kafka's JsonDeserializer refuses to deserialize classes from packages it doesn't explicitly trust (a security measure against malicious payloads). Since Transaction lives in com.rohith.finguard.common.model, we whitelist it here.
+
+
+Why ConcurrentHashMap? Kafka consumers can process messages
+using multiple threads under the hood; ConcurrentHashMap is thread-safe,
+preventing race conditions when multiple transactions
+ for the same card arrive close together.
+
+ The ProducerFactory is a design pattern used in frameworks like Spring for Apache Kafka to abstract and manage the creation of Kafka producer instances. It handles configuration, thread safety, and resource pooling, saving you from writing low-level boilerplate code for every message sent
+
+
+
+1. Without WebSocket (Normal REST API)
+
+Flow:
+
+User / Transaction System
+          |
+          |
+          v
+   Spring Boot API
+          |
+          |
+          v
+ FraudDetectionService
+          |
+     +----+----+
+     |         |
+ Rules       ML Model
+     |         |
+     +----+----+
+          |
+          v
+    RiskEvaluation
+          |
+          v
+      Database
+
+The dashboard gets data by asking repeatedly.
+
+Example:
+
+React Dashboard:
+
+GET /api/transactions
+
+Spring Boot:
+
+SELECT * FROM transactions
+
+Response:
+
+[
+ {
+   "transactionId":"TX101",
+   "amount":70000,
+   "score":91,
+   "status":"FRAUD"
+ }
+]
+How it updates?
+
+React must call the API again.
+
+Example:
+
+10:00:00
+React → GET /transactions
+
+10:00:05
+React → GET /transactions
+
+10:00:10
+React → GET /transactions
+
+This is called polling.
+
+
+
+
+2. With WebSocket
+
+Here the connection stays open.
+
+Flow:
+
+Transaction arrives
+        |
+        v
+Spring Boot Controller
+        |
+        v
+FraudDetectionService
+        |
+        +---- Rules
+        |
+        +---- ML Model
+        |
+        v
+RiskEvaluation
+        |
+        v
+WebSocket Server
+        |
+        v
+React Dashboard
+
+Example:
+
+A transaction comes:
+
+TX101
+Amount: 90000
+City: Chennai
+
+Spring Boot detects:
+
+FRAUD
+Score: 92
+
+Immediately pushes:
+
+{
+ "transactionId":"TX101",
+ "status":"FRAUD",
+ "score":92,
+ "reason":[
+   "High Amount",
+   "Impossible Travel"
+ ]
+}
+
+to React.
+
+React instantly shows:
+
+🚨 FRAUD ALERT
+
+Transaction TX101
+
+Risk Score: 92
+
+No refresh.
+No API call.
+
+
+Chrome extension: WebSocket King Client
+Postman (new versions support WebSocket)
+VS Code extension: Thunder Client WebSocket
+
+
+

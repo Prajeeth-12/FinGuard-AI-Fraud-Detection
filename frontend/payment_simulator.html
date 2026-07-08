@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FinGuard Payment Simulator</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#f4f7fb;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.container{
+    width:420px;
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+
+h1{
+    text-align:center;
+    color:#2563eb;
+    margin-bottom:25px;
+}
+
+label{
+    display:block;
+    margin-top:15px;
+    margin-bottom:6px;
+    font-weight:bold;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    border:1px solid #ccc;
+    border-radius:8px;
+}
+
+button{
+    width:100%;
+    margin-top:25px;
+    padding:14px;
+    background:#2563eb;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-size:17px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+#response{
+    margin-top:20px;
+    padding:12px;
+    border-radius:8px;
+    background:#eef;
+    display:none;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>💳 FinGuard Payment</h1>
+
+<label>Card Number</label>
+<input id="cardNumber" value="4111111111111111">
+
+<label>Amount</label>
+<input id="amount" type="number" value="1000">
+
+<label>Merchant</label>
+<input id="merchantName" value="Amazon">
+
+<label>Merchant City</label>
+<input id="merchantCity" value="Chennai">
+
+<button onclick="pay()">
+Make Payment
+</button>
+
+<div id="response"></div>
+
+</div>
+
+<script>
+
+async function pay(){
+
+const body={
+
+cardNumber:document.getElementById("cardNumber").value,
+
+amount:Number(document.getElementById("amount").value),
+
+merchantName:document.getElementById("merchantName").value,
+
+merchantCity:document.getElementById("merchantCity").value
+
+};
+
+try{
+
+const res=await fetch("http://localhost:8081/api/transactions/swipe",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify(body)
+
+});
+
+const data=await res.json();
+
+const div=document.getElementById("response");
+
+div.style.display="block";
+
+div.innerHTML=
+`
+<b>Status:</b> ${data.status}<br>
+<b>Transaction ID:</b> ${data.transactionId}
+`;
+
+}catch(e){
+
+alert("Backend not reachable");
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
